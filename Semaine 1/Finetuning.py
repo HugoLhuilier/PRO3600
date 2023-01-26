@@ -1,16 +1,21 @@
 from transformers import GPT2LMHeadModel, Trainer, AutoTokenizer, pipeline
+from transformers import TrainingArguments
 
 data = open("SkyrimScript.txt")
 dataset = data.read()
 model = GPT2LMHeadModel.from_pretrained("gpt2")
 tokenizer = AutoTokenizer.from_pretrained("gpt2")
-tokenized_dataset = tokenizer(dataset, max_length=518939)
+split_data = dataset.split("\n\n")
+tokenized_dataset = tokenizer(split_data)
+training_arg = TrainingArguments(output_dir="test_trainer")
 
-#print(dataset)
+#print(split_data)
+
 
 trainer = Trainer(
     model=model,
-    train_dataset=tokenized_dataset
+    train_dataset=tokenized_dataset,
+    args=training_arg,
 )
 
 pipe = pipeline("text-generation", model=model, tokenizer=tokenizer)
