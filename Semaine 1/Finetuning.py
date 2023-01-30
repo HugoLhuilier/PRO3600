@@ -1,3 +1,8 @@
+#################################################################################
+#######################         NE FONCTIONNE PAS         #######################
+#################################################################################
+
+
 from transformers import GPT2LMHeadModel, Trainer, AutoTokenizer, pipeline
 from transformers import TrainingArguments
 
@@ -6,7 +11,7 @@ dataset = data.read()
 model = GPT2LMHeadModel.from_pretrained("gpt2")
 tokenizer = AutoTokenizer.from_pretrained("gpt2")
 split_data = dataset.split("\n\n")
-tokenized_dataset = tokenizer(split_data)
+tokenized_dataset = tokenizer(split_data, padding=True)
 training_arg = TrainingArguments(output_dir="test_trainer")
 
 #print(split_data)
