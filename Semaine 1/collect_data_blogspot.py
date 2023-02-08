@@ -31,4 +31,4 @@ for link in soup.findAll("loc"):
         if txt.string != None:
             data[-1] += str(txt.string)
     
-print("Completed : "+data.length+" scripts")
+print("Completed : "+len(data)+" scripts")

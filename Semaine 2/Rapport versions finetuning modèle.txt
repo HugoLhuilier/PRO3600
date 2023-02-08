@@ -1,0 +1,231 @@
+/!\ Le paramètre per_device_train_batch_size ne peut dépasser 2 sans quand ma carte graphique ne vienne à cours de mémoire /!\
+
+#########################################
+############## Version 3.0 ##############
+#########################################
+
+Les premiers tests se font sur une seule époque pour voir l'impact à court terme de la variation du learning rate
+
+python run_clm.py --model_type gpt2 --model_name_or_path gpt2 --train_file "TestData.txt" --do_train --validation_file "TestData.txt" --do_eval --per_device_train_batch_size 2 --save_steps -1 --num_train_epochs 1 --fp16 --output_dir="finetuned_model_v3.0" --learning_rate 1e-3
+
+Résultats :
+***** train metrics *****
+  epoch                    =        1.0
+  train_loss               =     2.6984
+  train_runtime            = 0:03:21.77
+  train_samples            =       2696
+  train_samples_per_second =     13.361
+  train_steps_per_second   =      6.681
+
+***** eval metrics *****
+  epoch                   =        1.0
+  eval_accuracy           =     0.5815
+  eval_loss               =     2.0637
+  eval_runtime            = 0:01:20.75
+  eval_samples            =       2696
+  eval_samples_per_second =     33.384
+  eval_steps_per_second   =      4.173
+  perplexity              =     7.8748
+
+
+#########################################
+############## Version 3.1 ##############
+#########################################
+
+On augmente le learning rate (voir si cela améliore ou détériore le résultat sur une époque) --> 1e-2
+
+python run_clm.py --model_type gpt2 --model_name_or_path gpt2 --train_file "TestData.txt" --do_train --validation_file "TestData.txt" --do_eval --per_device_train_batch_size 2 --save_steps -1 --num_train_epochs 1 --fp16 --output_dir="finetuned_model_v3.1" --learning_rate 1e-2
+
+Résultats :
+***** train metrics *****
+  epoch                    =        1.0
+  train_loss               =     4.8616
+  train_runtime            = 0:03:23.62
+  train_samples            =       2696
+  train_samples_per_second =      13.24
+  train_steps_per_second   =       6.62
+
+***** eval metrics *****
+  epoch                   =        1.0
+  eval_accuracy           =     0.3303
+  eval_loss               =     4.1206
+  eval_runtime            = 0:01:16.04
+  eval_samples            =       2696
+  eval_samples_per_second =     35.452
+  eval_steps_per_second   =      4.431
+  perplexity              =    61.5986
+
+Loss bien plus élevée : mauvaise approche
+
+
+#########################################
+############## Version 3.2 ##############
+#########################################
+
+On diminue donc drastiquement le learning rate --> 1e-6
+
+python run_clm.py --model_type gpt2 --model_name_or_path gpt2 --train_file "TestData.txt" --do_train --validation_file "TestData.txt" --do_eval --per_device_train_batch_size 2 --save_steps -1 --num_train_epochs 1 --fp16 --output_dir="finetuned_model_v3.2" --learning_rate 1e-6
+
+Résultats :
+***** train metrics *****
+  epoch                    =        1.0
+  train_loss               =     2.7145
+  train_runtime            = 0:03:32.49
+  train_samples            =       2696
+  train_samples_per_second =     12.688
+  train_steps_per_second   =      6.344
+
+***** eval metrics *****
+  epoch                   =        1.0
+  eval_accuracy           =     0.5233
+  eval_loss               =     2.5165
+  eval_runtime            = 0:01:33.73
+  eval_samples            =       2696
+  eval_samples_per_second =     28.763
+  eval_steps_per_second   =      3.595
+  perplexity              =    12.3849
+
+Loss toujours plus élevée que pour un learning rate de 1e-3 : probablement que le modèle n'évolue pas assez vite. On essaie de trouver un entre-deux.
+
+
+#########################################
+############## Version 3.3 ##############
+#########################################
+
+On teste avec un learning rate de 5e-5.
+
+python run_clm.py --model_type gpt2 --model_name_or_path gpt2 --train_file "TestData.txt" --do_train --validation_file "TestData.txt" --do_eval --per_device_train_batch_size 2 --save_steps -1 --num_train_epochs 1 --fp16 --output_dir="finetuned_model_v3.3" --learning_rate 5e-5
+
+Résultats :
+***** train metrics *****
+  epoch                    =        1.0
+  train_loss               =     2.4481
+  train_runtime            = 0:03:23.08
+  train_samples            =       2696
+  train_samples_per_second =     13.275
+  train_steps_per_second   =      6.638
+
+***** eval metrics *****
+  epoch                   =        1.0
+  eval_accuracy           =     0.5622
+  eval_loss               =     2.2449
+  eval_runtime            = 0:01:16.07
+  eval_samples            =       2696
+  eval_samples_per_second =     35.439
+  eval_steps_per_second   =       4.43
+  perplexity              =     9.4395
+
+Train loss meilleur dans ce cas-ci, mais eval_loss toujours moins bonne qu'avec un learning rate de 1e-3. On augmente maintenant les epoch avec un entre-deux.
+
+#########################################
+############## Version 3.4 ##############
+#########################################
+
+On commence à augmenter à 3 epochs avec un learning rate de 1e-4
+
+python run_clm.py --model_type gpt2 --model_name_or_path gpt2 --train_file "TestData.txt" --do_train --validation_file "TestData.txt" --do_eval --per_device_train_batch_size 2 --save_steps -1 --num_train_epochs 3 --fp16 --output_dir="finetuned_model_v3.4" --learning_rate 1e-4
+
+Résultats :
+***** train metrics *****
+  epoch                    =        3.0
+  train_loss               =     2.2306
+  train_runtime            = 0:10:42.45
+  train_samples            =       2696
+  train_samples_per_second =     12.589
+  train_steps_per_second   =      6.295
+
+***** eval metrics *****
+  epoch                   =        3.0
+  eval_accuracy           =     0.5993
+  eval_loss               =     1.9482
+  eval_runtime            = 0:01:23.94
+  eval_samples            =       2696
+  eval_samples_per_second =     32.115
+  eval_steps_per_second   =      4.014
+  perplexity              =     7.0158
+
+Légère amélioration du train_loos/eval_loss par rapport à tous les autres modèles. Notons aussi les infos intermédiaires : 
+{'loss': 2.5111, 'learning_rate': 8.771018793273986e-05, 'epoch': 0.37}
+{'loss': 2.3991, 'learning_rate': 7.534619188921859e-05, 'epoch': 0.74}
+{'loss': 2.3092, 'learning_rate': 6.298219584569734e-05, 'epoch': 1.11}
+{'loss': 2.1834, 'learning_rate': 5.061819980217607e-05, 'epoch': 1.48}
+{'loss': 2.1921, 'learning_rate': 3.82542037586548e-05, 'epoch': 1.85}
+{'loss': 2.1055, 'learning_rate': 2.589020771513353e-05, 'epoch': 2.23}
+{'loss': 2.0843, 'learning_rate': 1.3526211671612266e-05, 'epoch': 2.6}
+{'loss': 2.0775, 'learning_rate': 1.162215628090999e-06, 'epoch': 2.97}
+
+Le learning rate a drastiquement diminué vers la fin (1e-6).
+
+
+#########################################
+############## Version 3.5 ##############
+#########################################
+
+On finetune le modèle 3.4 en rajoutant 3 epoch avec un learning rate de 1e-6 (pour un total de 6 epoch).
+
+python run_clm.py --model_type gpt2 --model_name_or_path "finetuned_model_v3.4" --train_file "TestData.txt" --do_train --validation_file "TestData.txt" --do_eval --per_device_train_batch_size 2 --save_steps -1 --num_train_epochs 3 --fp16 --output_dir="finetuned_model_v3.5" --learning_rate 1e-6
+
+Résultats :
+***** train metrics *****
+  epoch                    =        3.0
+  train_loss               =     1.9675
+  train_runtime            = 0:11:05.15
+  train_samples            =       2696
+  train_samples_per_second =      12.16
+  train_steps_per_second   =       6.08
+
+***** eval metrics *****
+  epoch                   =        3.0
+  eval_accuracy           =     0.5999
+  eval_loss               =     1.9422
+  eval_runtime            = 0:04:07.68
+  eval_samples            =       2696
+  eval_samples_per_second =     10.885
+  eval_steps_per_second   =      1.361
+  perplexity              =     6.9743
+
+Résultats intermédiaires : 
+{'loss': 1.9484, 'learning_rate': 8.763600395647874e-07, 'epoch': 0.37}
+{'loss': 1.9492, 'learning_rate': 7.527200791295747e-07, 'epoch': 0.74}
+{'loss': 1.9524, 'learning_rate': 6.29080118694362e-07, 'epoch': 1.11}
+{'loss': 1.9312, 'learning_rate': 5.054401582591494e-07, 'epoch': 1.48}
+{'loss': 1.9729, 'learning_rate': 3.820474777448071e-07, 'epoch': 1.85}
+{'loss': 1.953, 'learning_rate': 2.5865479723046484e-07, 'epoch': 2.23}
+{'loss': 1.9886, 'learning_rate': 1.3501483679525222e-07, 'epoch': 2.6}
+{'loss': 2.0389, 'learning_rate': 1.1374876360039564e-08, 'epoch': 2.97}
+
+Peu de différence avec le eval_loss précédent, un peu plus de différence avec le train_loss ; on remarque cependant dans les résultats intermédiaires que le loss a atteint un minimumaprès un peu plus d'une epoch avant d'augmenter à nouveau. 
+
+
+#########################################
+############## Version 3.6 ##############
+#########################################
+
+Nous tentons d'atteindre le minimum précédent en ne mettant qu'une epoch.
+
+python run_clm.py --model_type gpt2 --model_name_or_path "finetuned_model_v3.4" --train_file "TestData.txt" --do_train --validation_file "TestData.txt" --do_eval --per_device_train_batch_size 2 --save_steps -1 --num_train_epochs 1 --fp16 --output_dir="finetuned_model_v3.6" --learning_rate 1e-6
+
+Résultats:
+***** train metrics *****
+  epoch                    =        1.0
+  train_loss               =     1.9502
+  train_runtime            = 0:03:25.83
+  train_samples            =       2696
+  train_samples_per_second =     13.098
+  train_steps_per_second   =      6.549
+
+***** eval metrics *****
+  epoch                   =        1.0
+  eval_accuracy           =     0.5994
+  eval_loss               =     1.9457
+  eval_runtime            = 0:01:57.86
+  eval_samples            =       2696
+  eval_samples_per_second =     22.873
+  eval_steps_per_second   =      2.859
+  perplexity              =     6.9989
+
+Résultats intermédiaires :
+{'loss': 1.9485, 'learning_rate': 6.29080118694362e-07, 'epoch': 0.37}
+{'loss': 1.9495, 'learning_rate': 2.58160237388724e-07, 'epoch': 0.74}
+
+De même, eval_loss identique, train_loss légèrement amélioré.
