@@ -3,5 +3,5 @@ Symboles à retirer
 - Sauts de lignes (à partir de deux d'affilés : signifie la fin de parole d'un personnage, SAUF DANS LE SCRIPT DE SKYRIM)
 
 Tokens spéciaux :
-- THE ENDTHE END : fin d'un script (il peut y en avoir plusieurs qui se suivent)
-- <|endoftext|> : fin d'une réplique (
+- THE ENDTHE END : fin d'un script (il peut y en avoir plusieurs qui se suivent) (pas réellement un token)
+- <|endoftext|> : fin d'une réplique 
