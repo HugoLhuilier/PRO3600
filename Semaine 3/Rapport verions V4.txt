@@ -1,0 +1,5 @@
+#########################################
+############## Version 4.0 ##############
+#########################################
+
+python run_clm.py --model_type gpt2 --model_name_or_path gpt2 --train_file "Train dataset.csv" --do_train --validation_file "Test dataset.csv" --do_eval --per_device_train_batch_size 2 --save_steps -1 --num_train_epochs 3 --fp16 --output_dir="finetuned_model_v4.0" --learning_rate 1e-4
