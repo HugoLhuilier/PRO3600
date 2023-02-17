@@ -2,4 +2,28 @@
 ############## Version 4.0 ##############
 #########################################
 
+Premier modèle avec le dataset "épuré" sous format csv. Dans celui-ci, on reprend la dernière réplique de chaque bloc et on la remet au début du prochain bloc (probablement peu efficace). On reprend les paramètres optimaux des précédents tests : 3 epochs, learning rate de 1e-4.
+
 python run_clm.py --model_type gpt2 --model_name_or_path gpt2 --train_file "Train dataset.csv" --do_train --validation_file "Test dataset.csv" --do_eval --per_device_train_batch_size 2 --save_steps -1 --num_train_epochs 3 --fp16 --output_dir="finetuned_model_v4.0" --learning_rate 1e-4
+
+Résultats :
+
+***** train metrics *****
+  epoch                    =        3.0
+  train_loss               =     2.0946
+  train_runtime            = 0:11:53.46
+  train_samples            =       3066
+  train_samples_per_second =     12.892
+  train_steps_per_second   =      6.446
+
+***** eval metrics *****
+  epoch                   =        3.0
+  eval_accuracy           =      0.555
+  eval_loss               =      2.398
+  eval_runtime            = 0:01:28.88
+  eval_samples            =       3040
+  eval_samples_per_second =       34.2
+  eval_steps_per_second   =      4.275
+  perplexity              =    11.0016
+
+Résultats plutôt décevants au niveau de l'évaluation.
