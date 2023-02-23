@@ -27,3 +27,13 @@ Résultats :
   perplexity              =    11.0016
 
 Résultats plutôt décevants au niveau de l'évaluation.
+
+
+#########################################
+############## Version 4.1 ##############
+#########################################
+
+Mêmes paramètres mais on utilise le dataset avec le résumé du bloc précédent à chaque début de bloc
+
+python run_clm.py --model_type gpt2 --model_name_or_path gpt2 --train_file "FixedDataset S3 with summary train.csv" --do_train --validation_file "FixedDataset S3 with summary test.csv" --do_eval --per_device_train_batch_size 2 --save_steps -1 --num_train_epochs 3 --fp16 --output_dir="finetuned_model_v4.1" --learning_rate 1e-4
+
