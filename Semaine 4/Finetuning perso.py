@@ -43,10 +43,14 @@ def train(loader: DataLoader):
         model.zero_grad()
         inputs = batch[0].to(device)
         mask = batch[1].to(device)
-        outputs = model(inputs, attention_mask = mask)
+        outputs = model(inputs, attention_mask = mask, labels = inputs)
+        loss = outputs.loss
+        
+        batch_loss = loss.item()
+        total_loss += batch_loss
     
 trainData = ScriptDataset(srcTrain)
 testData = ScriptDataset(srcTest)
 
-trainLoader = DataLoader(trainData, batch_size=batch_size, shuffle=True)
-testLoader = DataLoader(testData, batch_size=batch_size*2, shuffle=True)    #batch size 2* plus grand car evaluation moins coûteuse en ressources que le training
+trainLoader = DataLoader(trainData, batch_size=1, shuffle=True)
+testLoader = DataLoader(testData, batch_size=1, shuffle=True)    #batch size 2* plus grand car evaluation moins coûteuse en ressources que le training
