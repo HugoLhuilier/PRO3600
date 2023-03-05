@@ -4,6 +4,10 @@ from torch import nn
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import pandas as pd
 import time
+import gc
+from torch.utils.tensorboard import SummaryWriter
+
+writer = SummaryWriter()
 
 model = AutoModelForCausalLM.from_pretrained("gpt2")
 tokenizer = AutoTokenizer.from_pretrained("gpt2")
@@ -14,15 +18,20 @@ print("Running on : "+ str(device))
 
 srcTest = "../Semaine 3/FixedDataset S3 with summary test.csv"
 srcTrain = "../Semaine 3/FixedDataset S3 with summary train.csv"
-check_interval = 1
-batch_size = 8
-chunk = 1024    #Nombre de tokens par bloc
-loss = nn.CrossEntropyLoss() #loss function
-lr = 0.01   #learning rate
+check_interval = 50
+batch_size = 1
+chunk = 700   #Nombre de tokens par bloc
+loss = nn.CrossEntropyLoss().to(device) #loss function
+lr = 1e-4   #learning rate
 optimizer = torch.optim.AdamW(model.parameters(), lr = lr)   #optimizer : adapte les paramètres du modèle après chaque batch
-scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=0.95) #scheduler : réduit le learning rate au fil du temps
+scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 100, gamma=0.95) #scheduler : réduit le learning rate au fil du temps
 epochs = 1
-savePath = r"C:\Users\user\Documents\Ecole\TSP\1A\PRO3600\PRO3600\Semaine 4\Premier test script perso"
+savePath = r"./Premier test script perso"
+
+stats_list = []
+stats_list.append(pd.Series(epochs, name="epochs"))
+stats_list.append(pd.Series(batch_size, name="batch_size"))
+stats_list.append(pd.Series(chunk, name="chunk"))
 
 class ScriptDataset(Dataset):
     def __init__(self, data_dir):
@@ -49,18 +58,34 @@ def train(loader: DataLoader):  #Entraîne le modèle suivant le loader et renvo
         loss = outputs[0]
         batch_loss = loss.item()
         total_loss += batch_loss
+        nlr = scheduler.get_last_lr()[0]
         
-        if step % check_interval == 0:
-            print("Batch : "+ str(step+1) +" of "+ str(len(loader))+", loss : "+ str(batch_loss)+", time : "+str(time.time() - t0))
+        writer.add_scalar("train_loss", batch_loss, step)
+        writer.add_scalar("learning_rate", nlr, step)
+        
+        if step % check_interval == 0 and step != 0:
+            print("Batch : "+ str(step+1) +" of "+ str(len(loader))+", loss : "+ str(batch_loss)+ ", learning rate : "+ str(nlr) +", time : "+str(time.time() - t0))
         
         loss.backward()
         optimizer.step()
         scheduler.step()
-        
-    return total_loss/len(loader), time.time() - t0
+        """
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
+        """
+    
+    loss=total_loss/len(loader)
+    t=time.time() - t0
+    print("")
+    print("=== Results ===")
+    print("Average loss : "+str(loss)+", elapsed time : "+str(t)+" -------------------")
+    print("")
+    return loss, t
 
-def eval(loader: DataLoader):   #Evalue le modèle suivant le loader et renvoie le loss moyen et le temps d'exécution
-    print("Starting evaluation...")
+def evalu(loader: DataLoader):   #Evalue le modèle suivant le loader et renvoie le loss moyen et le temps d'exécution
+    print("------------------- Evaluation -------------------")
+    print("")
     model.eval()
     t0 = time.time()
     total_loss = 0
@@ -73,18 +98,31 @@ def eval(loader: DataLoader):   #Evalue le modèle suivant le loader et renvoie 
             loss = outputs[0]
             batch_loss = loss.item()
             total_loss += batch_loss
+            
+            writer.add_scalar("test_loss", batch_loss, step)
         
         if step % check_interval == 0 and step != 0:
-            print("Batch : "+ str(step+1) +" of "+ str(len(loader))+", time : "+str(time.time() - t0))
+            print("Batch : "+ str(step+1) +" of "+ str(len(loader))+", loss : "+ str(batch_loss)+", time : "+str(time.time() - t0))
         
+        """
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
+        """
         
-    return total_loss / len(loader), time.time() - t0
+    loss=total_loss/len(loader)
+    t=time.time() - t0
+    print("")
+    print("=== Results ===")
+    print("Average loss : "+str(loss)+", elapsed time : "+str(t))
+    print("")
+    return loss, t
     
 trainData = ScriptDataset(srcTrain)
 testData = ScriptDataset(srcTest)
 
-trainLoader = DataLoader(trainData, 1, shuffle=True)
-testLoader = DataLoader(testData, 1, shuffle=True)    
+trainLoader = DataLoader(trainData, batch_size, shuffle=True)
+testLoader = DataLoader(testData, batch_size, shuffle=True)    
 
 
 def start():
@@ -93,26 +131,30 @@ def start():
     print("======================================================")
     print("")
     
+    tTime = 0
+    
     for i in range(epochs):
         print("------------------- epoch "+str(i+1)+"/"+str(epochs))
         print("")
         
         loss, t = train(trainLoader)
+        tTime += t
         
-        print("")
-        print("=== Results ===")
-        print("Average loss : "+str(loss)+", elapsed time : "+str(t)+" -------------------")
-        print("")
+    stats_list.append(pd.Series(loss, name="train_loss"))
+    stats_list.append(pd.Series(tTime, name="train_time"))
+    stats_list.append(pd.Series(len(trainData), name="train_batches"))
+    stats_list.append(pd.Series(lr, name="init_learning_rate"))
+    stats_list.append(pd.Series(scheduler.get_last_lr(), name="last_learning_rate"))
     
-    print("------------------- Evaluation -------------------")
-    print("")
+    loss, t = evalu(testLoader)
     
-    loss, t = eval(testLoader)
-    print("")
-    print("=== Results ===")
-    print("Average loss : "+str(loss)+", elapsed time : "+str(t))
-    print("")
+    stats_list.append(pd.Series(loss, name="test_loss"))
+    stats_list.append(pd.Series(t, name="test_time"))
+    stats_list.append(pd.Series(len(testData), name="test_batches"))
+    
     
     model.save_pretrained(savePath)
+    tokenizer.save_pretrained(savePath)
+    pd.DataFrame(stats_list).to_csv(savePath+"/stats.csv")
     print("======================================================")
     print("Training complete ! Model saved at location : "+savePath)
