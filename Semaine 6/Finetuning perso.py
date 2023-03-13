@@ -7,18 +7,20 @@ import time
 import gc
 from torch.utils.tensorboard import SummaryWriter
 
-ver = "5.3"
+ver = "6.0"
 writer = SummaryWriter(log_dir="runs/V"+ver)
 
-model = AutoModelForCausalLM.from_pretrained("gpt2")
-tokenizer = AutoTokenizer.from_pretrained("gpt2")
+model = AutoModelForCausalLM.from_pretrained("../Semaine 4/finetuned_model_v5.3")
+tokenizer = AutoTokenizer.from_pretrained("../Semaine 4/finetuned_model_v5.3")
 device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
 model.to(device)
 print("Running on : "+ str(device))
 
 
-srcTest = "../Semaine 3/FixedDataset S3 with summary test.csv"
-srcTrain = "../Semaine 3/FixedDataset S3 with summary train.csv"
+nbBatches = 2437362 #nombre de batches indiqué dans data_stats.json
+
+src = "./batched_data.csv"
+prop_train = 0.75
 check_interval = 50
 batch_size = 2
 chunk = 1024   #Nombre de tokens par bloc
@@ -26,7 +28,7 @@ loss = nn.CrossEntropyLoss().to(device) #loss function
 lr = 1e-4   #learning rate
 optimizer = torch.optim.AdamW(model.parameters(), lr = lr)   #optimizer : adapte les paramètres du modèle après chaque batch
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 100, gamma=0.95) #scheduler : réduit le learning rate au fil du temps
-epochs = 3
+epochs = 1
 savePath = r"./finetuned_model_v"+ver
 
 stats_list = []
@@ -37,16 +39,19 @@ stats_list.append(pd.Series(chunk, name="chunk"))
 tokenizer.pad_token = tokenizer.eos_token
 
 class ScriptDataset(Dataset):
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, i_min=0, i_max=0):
         self.data_dir = data_dir
         self.data = pd.read_csv(data_dir)
+        self.i_min = i_min
+        self.i_max = i_max if i_max > 0 else (self.data.size - 1)
     
     def __len__(self):
-        return self.data.size
+        return self.i_max - self.i_min + 1
     
     def __getitem__(self, i):
-        encoded = tokenizer(self.data.iloc[i][0], truncation = True, max_length = chunk, padding='max_length')
-        return torch.tensor(encoded["input_ids"]), torch.tensor(encoded["attention_mask"])
+        index = i + self.i_min
+        encoded = tokenizer(self.data.iloc[index]["text"], truncation = True, max_length = chunk, padding='max_length')
+        return torch.tensor(encoded["input_ids"]), torch.tensor(encoded["attention_mask"]),  ((torch.tensor(encoded["input_ids"])) if (self.data.iloc[index]["apply_loss"] == 1) else (-100 * torch.ones(len(encoded["input_ids"]))))
 
 def train(loader: DataLoader, e):  #Entraîne le modèle suivant le loader et renvoie le loss moyen et le temps d'exécution
     print("Starting training...")
@@ -54,17 +59,24 @@ def train(loader: DataLoader, e):  #Entraîne le modèle suivant le loader et re
     total_loss = 0
     model.train()
     l = len(loader)
+    
+    nb_loss = 0
+    
     for step, batch in enumerate(loader):
         model.zero_grad()
         inputs = batch[0].to(device)
         mask = batch[1].to(device)
-        outputs = model(inputs, attention_mask = mask, labels = inputs)
+        labels = batch[2].type(torch.LongTensor).to(device)
+        outputs = model(inputs, attention_mask = mask, labels = labels)
         loss = outputs[0]
         batch_loss = loss.item()
-        total_loss += batch_loss
         nlr = scheduler.get_last_lr()[0]
         
-        writer.add_scalar("train_loss", batch_loss, step*batch_size + l*e*batch_size)
+        if labels[0][0] != -100:
+            total_loss += batch_loss
+            nb_loss +=1
+            writer.add_scalar("train_loss", batch_loss, step*batch_size + l*e*batch_size)
+        
         writer.add_scalar("learning_rate", nlr, step*batch_size + l*e*batch_size)
         
         if step % check_interval == 0 and step != 0:
@@ -79,7 +91,7 @@ def train(loader: DataLoader, e):  #Entraîne le modèle suivant le loader et re
         gc.collect()
         """
     
-    loss=total_loss/len(loader)
+    loss=total_loss/nb_loss
     t=time.time() - t0
     print("")
     print("=== Results ===")
@@ -104,7 +116,7 @@ def evalu(loader: DataLoader):   #Evalue le modèle suivant le loader et renvoie
             batch_loss = loss.item()
             total_loss += batch_loss
             
-            writer.add_scalar("test_loss", batch_loss, step*batch_size)
+            #writer.add_scalar("test_loss", batch_loss, step*batch_size)
         
         if step % check_interval == 0 and step != 0:
             print("Batch : "+ str(step+1) +" of "+ str(l)+", loss : "+ str(batch_loss)+", time : "+str(time.time() - t0))
@@ -123,10 +135,10 @@ def evalu(loader: DataLoader):   #Evalue le modèle suivant le loader et renvoie
     print("")
     return loss, t
     
-trainData = ScriptDataset(srcTrain)
-testData = ScriptDataset(srcTest)
+trainData = ScriptDataset(src, 0, int(prop_train * nbBatches))
+testData = ScriptDataset(src, int(prop_train * nbBatches) + 1, nbBatches - 1)
 
-trainLoader = DataLoader(trainData, batch_size, shuffle=True)
+trainLoader = DataLoader(trainData, batch_size, """shuffle=True""")
 testLoader = DataLoader(testData, batch_size, shuffle=True)    
 
 

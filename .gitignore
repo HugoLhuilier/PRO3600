@@ -1,4 +1,5 @@
 finetuned_model_v*
+/Resources
 
 #Semaine 1
 
@@ -6,5 +7,6 @@ SkyrimScript.txt
 /Semaine\ 1/finetuned_model/
 Finetune\ Script.txt 
 
-#Semaine 2
+#Semaine 6
 
+batched_data.csv
