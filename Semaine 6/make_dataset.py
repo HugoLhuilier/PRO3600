@@ -7,7 +7,7 @@ import os
 
 tok = AutoTokenizer.from_pretrained("../Semaine 4/finetuned_model_v5.3")
 
-save_path = "./Batches2"
+save_path = "./Batches4"
 nbTokens = 0
 toBatch = []
 mask = []
@@ -58,13 +58,17 @@ with open("../Resources/Stories 11.03/all_paths_v2.json", "r") as r:
             for path in story["paths"]:
                 nPath += 1
                 print("----- Path", nPath, "of", lStory)
+                tmp = str(tags[i]["tags"]) + "\n"
                 
                 for seg in path:
-                    tmp = str(tags[i]["tags"]) + "\n" + seg[0] + "\n\n"
+                    tmp += seg[0] + "\n\n"
                     tokens = tok(tmp, truncation = True)    #On tronque les passages potentiellement trop longs
                     segTokens = len(tokens["input_ids"])   
                     if nbTokens + segTokens > 1020:
                         append_batches()
+                        tmp = str(tags[i]["tags"]) + "\n"
+                    else:
+                        tmp = ""
                     
                     toBatch += tokens["input_ids"]
                     mask += tokens["attention_mask"]
