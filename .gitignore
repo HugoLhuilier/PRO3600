@@ -1,5 +1,6 @@
 finetuned_model_v*
 /Resources
+*.tar*
 
 #Semaine 1
 
@@ -11,3 +12,7 @@ Finetune\ Script.txt
 
 batched_data.csv
 /Semaine\ 6/Batches*
+
+#Semaine 8
+
+/Semaine\ 8
