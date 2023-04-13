@@ -14,8 +14,8 @@ import math
 ver = "7.1"
 
 
-model = AutoModelForCausalLM.from_pretrained("../Data/Semaine_6/finetuned_model_v5.3")
-tokenizer = AutoTokenizer.from_pretrained("../Data/Semaine_6/finetuned_model_v5.3")
+model = AutoModelForCausalLM.from_pretrained("../Semaine 4/finetuned_model_v5.3")
+tokenizer = AutoTokenizer.from_pretrained("../Semaine 4/finetuned_model_v5.3")
 device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
 model.to(device)
 print("Running on : "+ str(device))
@@ -23,7 +23,7 @@ print("Running on : "+ str(device))
 
 nbBatches = 2506122 #nombre de batches indiqué dans data_stats.json
 
-src = "../Data/Semaine_6/Batches4"
+src = "./Batches4"
 stories_train = 650
 check_interval = 50
 story_checkpoint = 100
@@ -250,6 +250,3 @@ def start():
     pd.DataFrame(stats_list).to_csv(savePath+"/stats.csv")
 
 
-
-if __name__ == "__main__":
-    start()

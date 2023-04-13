@@ -3,22 +3,22 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torch import nn
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import LlamaForCausalLM, LlamaTokenizer
 import pandas as pd
 import time
 import gc
 from torch.utils.tensorboard import SummaryWriter
 import os
 import math
+from accelerate import Accelerator
 
-ver = "7.1"
+accelerator = Accelerator()
 
+ver = "L1.0"
 
-model = AutoModelForCausalLM.from_pretrained("../Data/Semaine_6/finetuned_model_v5.3")
-tokenizer = AutoTokenizer.from_pretrained("../Data/Semaine_6/finetuned_model_v5.3")
-device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
-model.to(device)
-print("Running on : "+ str(device))
+model = LlamaForCausalLM.from_pretrained("decapoda-research/llama-7b-hf")
+tokenizer = LlamaTokenizer.from_pretrained("decapoda-research/llama-7b-hf")
+print("Running with HuggingFace accelerate")
 
 
 nbBatches = 2506122 #nombre de batches indiqué dans data_stats.json
@@ -28,8 +28,8 @@ stories_train = 650
 check_interval = 50
 story_checkpoint = 100
 batch_size = 4
-chunk = 1024   #Nombre de tokens par bloc
-loss = nn.CrossEntropyLoss().to(device) #loss function
+chunk = 2048   #Nombre de tokens par bloc
+loss = nn.CrossEntropyLoss() #loss function
 lr = 1e-4   #learning rate
 optimizer = torch.optim.AdamW(model.parameters(), lr = lr)   #optimizer : adapte les paramètres du modèle après chaque batch
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1, gamma=0.95) #scheduler : réduit le learning rate au fil du temps
@@ -37,6 +37,8 @@ epochs = 5
 savePath = r"../Models/finetuned_model_v"+ver
 
 writer = SummaryWriter(log_dir=savePath+"/runs")
+
+model, optimizer, scheduler = accelerator.prepare(model, optimizer, scheduler)
 
 stats_list = []
 stats_list.append(pd.Series(epochs, name="epochs"))
@@ -96,9 +98,8 @@ def train(loader: DataLoader):  #Entraîne le modèle suivant le loader et renvo
             continue
 
         model.zero_grad()
-        inputs = batch[0].type(torch.LongTensor).to(device)
-        mask = batch[1].to(device)
-        labels = labels.to(device)
+        inputs = batch[0].type(torch.LongTensor)
+        mask = batch[1]
 
         outputs = model(inputs, attention_mask = mask, labels = labels)
         loss = outputs[0]
@@ -108,7 +109,7 @@ def train(loader: DataLoader):  #Entraîne le modèle suivant le loader et renvo
             total_loss += batch_loss
             nb_loss += 1
 
-        loss.backward()
+        accelerator.backward(loss)
         optimizer.step()
 
         if time.time() - t0Log > 1:
@@ -145,8 +146,8 @@ def evalu(loader: DataLoader):   #Evalue le modèle suivant le loader et renvoie
     t0 = time.time()
     total_loss = 0
     for step, batch in enumerate(loader):
-        inputs = batch[0].type(torch.LongTensor).to(device)
-        mask = batch[1].to(device)
+        inputs = batch[0].type(torch.LongTensor)
+        mask = batch[1]
 
         with torch.no_grad():
             outputs = model(inputs, attention_mask = mask, labels = inputs)
@@ -174,7 +175,7 @@ stories_data = [StoryDataset(p) for p in os.listdir(src)]
 trainData = stories_data[:stories_train]
 testData = stories_data[stories_train:]
 
-trainLoaders = [DataLoader(d, batch_size, shuffle = True) for d in trainData]
+trainLoaders = [accelerator.prepare(DataLoader(d, batch_size, shuffle = True)) for d in trainData]
 testLoaders = [DataLoader(d, batch_size, shuffle = True) for d in testData]
 
 
@@ -250,6 +251,7 @@ def start():
     pd.DataFrame(stats_list).to_csv(savePath+"/stats.csv")
 
 
-
+"""
 if __name__ == "__main__":
     start()
+"""
