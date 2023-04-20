@@ -137,6 +137,7 @@ def checkpoint(storiesSaved, nb):
 
     pd.DataFrame(storiesSaved).to_csv(p+"/listStories.csv")
     model.save_pretrained(p)
+    tokenizer.save_pretrained(p)
     print("CHECKPOINT : ", p)
 
 
@@ -219,6 +220,7 @@ def start():
         if not os.path.exists(savePath+"/epoch"+str(curEpoch)):
             os.makedirs(savePath+"/epoch"+str(curEpoch))
         model.save_pretrained(savePath+"/epoch"+str(curEpoch))
+        tokenizer.save_pretrained(savePath+"/epoch"+str(curEpoch))
         print("Model saved at location", savePath+"/epoch"+str(curEpoch), "-------------------")
         print("")
 
@@ -227,7 +229,7 @@ def start():
     if not os.path.exists(savePath+"/final"):
         os.makedirs(savePath+"/final")
     model.save_pretrained(savePath+"/final")
-    tokenizer.save_pretrained(savePath)
+    tokenizer.save_pretrained(savePath+"/final")
     print("======================================================")
     print("Training complete ! Model saved at location : "+savePath+"/final")
     print("")
