@@ -21,8 +21,6 @@ model.to(device)
 print("Running on : "+ str(device))
 
 
-nbBatches = 2506122 #nombre de batches indiqué dans data_stats.json
-
 src = "../Data/Semaine_6/Batches4"
 stories_train = 650
 check_interval = 50
