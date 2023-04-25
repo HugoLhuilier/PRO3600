@@ -4,11 +4,12 @@ from transformers import LlamaTokenizer
 from torch import tensor
 import torch
 import os
+from torch import nn
 
 tok = LlamaTokenizer.from_pretrained("decapoda-research/llama-7b-hf")
 
-save_path = "./Batches_lama"
-max_tokens = 2045
+save_path = "../Semaine 10/Batches_lama_1024_purified"
+max_tokens = 1024
 nbTokens = 0
 toBatch = []
 mask = []
@@ -18,21 +19,25 @@ stats = {"nbBatches": 0, "nbTokens": 0, "nbPaths": 0, "nbStories": 0}
 
 def append_batches():   
     global toBatch, nbTokens, stats, sId, toBatch, mask, labels
-    sPath = save_path +"/Story "+sId
-    if not os.path.exists(sPath):
-        os.makedirs(sPath)
+    
+    if labels != [-100]*len(labels):   
+        sPath = save_path +"/Story "+sId
+        if not os.path.exists(sPath):
+            os.makedirs(sPath)
+            
+        torch.save(nn.functional.normalize(tensor(toBatch, dtype = torch.float32), dim = 0), sPath+"/Batch " + str(stats["nbBatches"]) +".pt")
+        torch.save(tensor(mask), sPath+"/Mask " + str(stats["nbBatches"]) +".pt")
+        torch.save(nn.functional.normalize(tensor(labels, dtype = torch.float32), dim = 0), sPath+"/Labels " + str(stats["nbBatches"]) +".pt")
+        stats["nbTokens"] += nbTokens
+        stats["nbBatches"] += 1
         
-    torch.save(tensor(toBatch), sPath+"/Batch " + str(stats["nbBatches"]) +".pt")
-    torch.save(tensor(mask), sPath+"/Mask " + str(stats["nbBatches"]) +".pt")
-    torch.save(tensor(labels), sPath+"/Labels " + str(stats["nbBatches"]) +".pt")
-    stats["nbTokens"] += nbTokens
     toBatch = ""
-    nbTokens = 0
-    stats["nbBatches"] += 1
+    nbTokens = 0       
     toBatch = []
     mask = []
     labels = []
     
+
 
 with open("../Resources/Stories 11.03/all_paths_v2.json", "r") as r:
     with open("../Resources/Stories 11.03/all_stories.json", "r") as r2:
@@ -44,6 +49,11 @@ with open("../Resources/Stories 11.03/all_paths_v2.json", "r") as r:
         stats["nbStories"] = lData
         
         for story in data:
+            sId = story["storyID"]
+            
+            if sId == "59840":
+                continue
+            
             nStory += 1
             print("Story", nStory, "of", lData)
             
@@ -51,14 +61,12 @@ with open("../Resources/Stories 11.03/all_paths_v2.json", "r") as r:
             nPath = 0
             stats["nbPaths"] += lStory
             
-            sId = story["storyID"]
-            
             while str(tags[i]["id"]) != sId: #Les stories sont rangées dans le même ordre mais, dans le cas où l'on ignore une histoire, on fait attention à sélectionner les bons tags
                 i+=1
             
             for path in story["paths"]:
                 nPath += 1
-                print("----- Path", nPath, "of", lStory)
+                print("----- Path", nPath, "of", lStory, "(id :", sId, ")")
                 tmp = str(tags[i]["tags"]) + "\n"
                 
                 for seg in path:

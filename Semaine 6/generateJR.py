@@ -9,8 +9,8 @@ def generate(text, n=5, length_multiplier=3, add_score=False, repetition=1.0, te
     input_ids = tokenizer.encode(text, return_tensors='pt').to(DEVICE)
     length = len(input_ids[0])
     beam_outputs = model.generate(input_ids, max_length=length * length_multiplier, top_k=40, temperature=temperature,
-                              	do_sample=False,
-                              	top_p=0.9, repetition_penalty=repetition, num_return_sequences=n, num_beams=n,
+                              	do_sample=True,
+                              	top_p=0.9, repetition_penalty=repetition, num_return_sequences=n, num_beams=n, 
                               	early_stopping=True, return_dict_in_generate=True,  output_scores=True)
     print("Output:\n" + 100 * '-')
     res = []

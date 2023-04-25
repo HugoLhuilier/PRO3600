@@ -1,14 +1,21 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, LlamaForCausalLM, LlamaTokenizer, BitsAndBytesConfig
 import torch
 import sys, os
 
-modelPath = "../../Resources/v7.0_epoch_1"
+modelPath = "../../Autres ressources PRO3600/finetuned_model_vL1.1_1024/checkpoint 500 stories epoch 4"
 length_mult = 10
 rep_pen = 10.
 
+quantization_config = BitsAndBytesConfig(llm_int8_enable_fp32_cpu_offload=True)
+device_map ={
+    "model.embed_tokens.weight": "cpu",
+    "model.layers.0.self_attn.q_proj.weight": "cpu",
+    "model.layers.0.self_attn.k_proj.weight": "cpu",
+    "model.layers.0.self_attn.v_proj.weight": "cpu",
+    }
 
-model = AutoModelForCausalLM.from_pretrained(modelPath)
-tokenizer = AutoTokenizer.from_pretrained(modelPath)
+model = AutoModelForCausalLM.from_pretrained(modelPath, quantization_config=quantization_config)
+tokenizer = LlamaTokenizer.from_pretrained("decapoda-research/llama-7b-hf")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
 
 def log(txt):
@@ -23,7 +30,7 @@ def enablePrint():
     sys.stdout = sys.__stdout__
 
 def generate(text, n=5, length_multiplier=3, add_score=False, repetition=1.0, temperature = 1.0, beamSearch = False):
-    input_ids = tokenizer.encode(text, return_tensors='pt').to(DEVICE)
+    input_ids = tokenizer.encode(text, return_tensors='pt')
     length = len(input_ids[0])
     if beamSearch:
         outputs = model.generate(input_ids, max_length=length * length_multiplier, top_k=40, temperature=temperature,
