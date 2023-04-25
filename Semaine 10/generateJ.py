@@ -13,12 +13,12 @@ def generate(text, n=5, length_multiplier=3, add_score=False, repetition=1.0, te
     length = len(input_ids[0])
     if beamSearch:
         outputs = model.generate(input_ids, max_length=length * length_multiplier, top_k=40, temperature=temperature,
-                                  	do_sample=False,
+                                  	do_sample=True,
                                   	top_p=0.9, repetition_penalty=repetition, num_return_sequences=n, num_beams=n,
                                   	early_stopping=True, return_dict_in_generate=True,  output_scores=True)
     else:
         outputs = model.generate(input_ids, max_length=length * length_multiplier, top_k=40, temperature=temperature,
-                                  	do_sample=False,
+                                  	do_sample=True,
                                   	top_p=0.9, repetition_penalty=repetition,
                                   	return_dict_in_generate=True,  output_scores=True)
     print("Output:\n" + 100 * '-')
