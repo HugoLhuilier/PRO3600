@@ -17,7 +17,7 @@ import math
 
 
 ver = "L1.1_1024"
-
+torch.set_default_dtype(torch.bfloat16)
 
 device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
 
@@ -29,7 +29,7 @@ story_checkpoint = 100
 batch_size = 1
 chunk = 1024   #Nombre de tokens par bloc
 
-model = LlamaForCausalLM.from_pretrained("decapoda-research/llama-7b-hf", max_position_embeddings = chunk, load_in_8bit=True, torch_dtype=torch.float16, device_map='auto')
+model = LlamaForCausalLM.from_pretrained("decapoda-research/llama-7b-hf", max_position_embeddings = chunk, load_in_8bit=True, device_map='auto')
 tokenizer = LlamaTokenizer.from_pretrained("decapoda-research/llama-7b-hf")
 print("Running on : "+ str(device))
 print(model.get_memory_footprint())
